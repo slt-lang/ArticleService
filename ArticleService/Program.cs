@@ -11,11 +11,10 @@ namespace ArticleService
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            var connectionString = builder.Configuration.GetConnectionString("ArticleDb");
-            if (connectionString == null)
-                connectionString = builder.Configuration["DB_CONNECTION_STRING"];
+            Console.WriteLine(builder.Configuration.GetDebugView());
+            Thread.Sleep(5000);
 
-            builder.Services.AddNpgsql<ArticleServiceContext>(connectionString);
+            builder.Services.AddNpgsql<ArticleServiceContext>(builder.Configuration.GetConnectionString("ArticleDb"));
             builder.Services.AddTransient<IArticleDb, ArticleDb>();
 
             var configuration = builder.Configuration.GetSection("Config").Get<Config>();
