@@ -1,0 +1,2 @@
+dotnet ef migrations add M1 --project "ArticleService.Adapters/ArticleService.Adapters.csproj" --context "ArticleService.Adapters.Database.ArticleServiceContext" --startup-project "ArticleService/ArticleService.csproj"
+dotnet ef database update 0 --project "ArticleService.Adapters/ArticleService.Adapters.csproj" --context "ArticleService.Adapters.Database.ArticleServiceContext" --startup-project "ArticleService/ArticleService.csproj"
