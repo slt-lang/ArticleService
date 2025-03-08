@@ -1,0 +1,61 @@
+name: CD
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release
+
+      - name: Publish
+        run: dotnet publish --configuration Release --output ./publish
+
+      - name: Configure SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy via SSH
+        run: |
+          # Настройки SSH
+          HOST=${{ secrets.SSH_HOST }}
+          PORT=${{ secrets.SSH_PORT }}
+          USER=${{ secrets.SSH_USER }}
+          DEPLOY_PATH=${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PATH2=${{ secrets.DEPLOY_PATH2 }}
+          APP_NAME=${{ secrets.APP_NAME }}
+          SERVICE_NAME=${{ secrets.SERVICE_NAME }}
+          SERVICE_NAME2=${{ secrets.SERVICE_NAME2 }}
+
+          echo "Stopping service..."
+          ssh -o StrictHostKeyChecking=no $USER@$HOST -p $PORT "sudo systemctl stop $SERVICE_NAME"
+
+          echo "Removing old files..."
+          ssh -o StrictHostKeyChecking=no $USER@$HOST -p $PORT "rm -rf $DEPLOY_PATH/*"
+
+          echo "Copying files..."
+          rsync -avz ./publish/ $USER@$HOST:$DEPLOY_PATH -e "ssh -p $PORT"
+
+          echo "Starting service..."
+          ssh -o StrictHostKeyChecking=no $USER@$HOST -p $PORT "sudo systemctl start $SERVICE_NAME"
+          
+          echo "Starting service-2..."
+          ssh -o StrictHostKeyChecking=no $USER@$HOST -p $PORT "sudo /usr/bin/bash /home/multiplier.sh $DEPLOY_PATH $DEPLOY_PATH2 $SERVICE_NAME2"
+
+          echo "Deployment complete!"
