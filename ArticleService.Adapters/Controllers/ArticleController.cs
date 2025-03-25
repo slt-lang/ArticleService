@@ -1,6 +1,5 @@
 using ArticleService.Domain.Ports;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using sltlang.Common.ArticleService.Models;
 
 namespace ArticleService.Controllers

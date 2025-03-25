@@ -1,9 +1,7 @@
 using ArticleService.Adapters.Database;
 using ArticleService.Tests.Environment;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using sltlang.Common.ArticleService.Models;
-using System.Xml;
 
 namespace ArticleService.Tests
 {

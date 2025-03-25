@@ -1,7 +1,6 @@
 ﻿using ArticleService.Adapters.Database.Models;
 using ArticleService.Domain;
 using ArticleService.Domain.Ports;
-using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using sltlang.Common.ArticleService.Models;
