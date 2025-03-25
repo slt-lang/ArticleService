@@ -51,7 +51,7 @@ namespace ArticleService.Adapters.Database
                 e.Property(e => e.ArticleId).IsRequired();
                 e.Property(e => e.Date).IsRequired();
 
-                e.HasOne(e => e.Article).WithMany().OnDelete(DeleteBehavior.NoAction);
+                e.HasOne(e => e.Article).WithMany().OnDelete(DeleteBehavior.Cascade);
 
                 e.HasIndex(e => e.Date);
                 e.HasIndex(e => e.ArticleId);
