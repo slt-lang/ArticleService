@@ -7,7 +7,7 @@ namespace ArticleService.Domain.Ports
         /// <summary>
         /// Возвращает страницу
         /// </summary>
-        Task<ArticleDto?> GetArticle(string name);
+        Task<ArticleDto?> GetArticle(string name, bool save_visit = true);
         /// <summary>
         /// Создаёт или обновляет страницу
         /// </summary>
@@ -28,5 +28,9 @@ namespace ArticleService.Domain.Ports
         /// Удаляет историю изменений дальше старше определённого изменения
         /// </summary>
         Task CheckMaxHistory(int articleId);
+        /// <summary>
+        /// Возвращает топ самых популярных статей
+        /// </summary>
+        Task<List<ArticleDto>> GetRating(int take = 100);
     }
 }

@@ -1,5 +1,6 @@
 using ArticleService.Adapters.Database;
 using ArticleService.Domain;
+using ArticleService.Domain.Logic;
 using ArticleService.Domain.Ports;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +14,8 @@ namespace ArticleService
 
             builder.Services.AddNpgsql<ArticleServiceContext>(builder.Configuration.GetConnectionString("ArticleDb"));
             builder.Services.AddTransient<IArticleDb, ArticleDb>();
+            builder.Services.AddTransient<IDateTime, DateTimeProvider>();
+            builder.Services.AddMemoryCache();
 
             var configuration = builder.Configuration.GetSection("Config").Get<Config>();
             builder.Services.AddSingleton(configuration!);
