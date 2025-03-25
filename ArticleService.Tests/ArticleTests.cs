@@ -1,6 +1,9 @@
 using ArticleService.Adapters.Database;
+using ArticleService.Domain.Logic;
 using ArticleService.Tests.Environment;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Moq;
 using sltlang.Common.ArticleService.Models;
 
 namespace ArticleService.Tests
@@ -33,7 +36,7 @@ namespace ArticleService.Tests
         {
             var articleDbContext = CommonMocks.ArticleContext;
             var config = CommonMocks.Config;
-            var articleService = new ArticleDb(articleDbContext, config);
+            var articleService = new ArticleDb(CommonMocks.DateTimeProvider, CommonMocks.MemoryCache, articleDbContext, config);
 
             for (var i = 0; i < config.ArticleHistoryMaxCount * 2; i++)
             {
@@ -48,7 +51,7 @@ namespace ArticleService.Tests
         {
             var articleDbContext = CommonMocks.ArticleContext;
             var config = CommonMocks.Config;
-            var articleService = new ArticleDb(articleDbContext, config);
+            var articleService = new ArticleDb(CommonMocks.DateTimeProvider, CommonMocks.MemoryCache, articleDbContext, config);
 
             for (var i = 0; i < 10; i++)
             {
