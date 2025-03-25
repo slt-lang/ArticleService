@@ -15,7 +15,7 @@ namespace ArticleService.Adapters.Database
             {
                 return null!;
             }
-            var articleContent = await db.ArticleHistory.AsNoTracking().Where(x => x.ArticleId == articleInfo.Id).OrderByDescending(x => x.CreateDate).FirstAsync();
+            var articleContent = await db.ArticleHistory.AsNoTracking().Where(x => x.ArticleId == articleInfo.Id).OrderByDescending(x => x.CreateDate).OrderByDescending(x => x.Id).FirstAsync();
 
             return new ArticleDto()
             {
@@ -46,6 +46,7 @@ namespace ArticleService.Adapters.Database
                     Content = article.Content,
                 });
 
+                await db.SaveChangesAsync();
                 await CheckMaxHistory(existedArticle.Id);
             }
             else
@@ -61,8 +62,8 @@ namespace ArticleService.Adapters.Database
                         }
                     ]
                 });
+                await db.SaveChangesAsync();
             }
-            await db.SaveChangesAsync();
         }
 
         public async Task<List<ArticleDto>> GetArticleHistory(ArticleDto article)
