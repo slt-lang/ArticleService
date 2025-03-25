@@ -2,13 +2,14 @@
 using ArticleService.Domain;
 using ArticleService.Domain.Ports;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using sltlang.Common.ArticleService.Models;
 
 namespace ArticleService.Adapters.Database
 {
-    public class ArticleDb(ArticleServiceContext db, Config config) : IArticleDb
+    public class ArticleDb(IDateTime dateTime, IMemoryCache memoryCache, ArticleServiceContext db, Config config) : IArticleDb
     {
-        public async Task<ArticleDto?> GetArticle(string name)
+        public async Task<ArticleDto?> GetArticle(string name, bool save_visit = true)
         {
             var articleInfo = await db.Articles.AsNoTracking().FirstOrDefaultAsync(x => x.Name == name);
             if (articleInfo == null)
@@ -16,6 +17,11 @@ namespace ArticleService.Adapters.Database
                 return null!;
             }
             var articleContent = await db.ArticleHistory.AsNoTracking().Where(x => x.ArticleId == articleInfo.Id).OrderByDescending(x => x.CreateDate).OrderByDescending(x => x.Id).FirstAsync();
+
+            if (save_visit)
+            {
+                await AddVisit(articleInfo.Id);
+            }
 
             return new ArticleDto()
             {
@@ -119,6 +125,58 @@ namespace ArticleService.Adapters.Database
                 }
                 await db.SaveChangesAsync();
             }
+        }
+
+        private async Task AddVisit(int aricleId)
+        {
+            var date = dateTime.UtcNow.Date;
+
+            var vo = await db.ArticleVisits.FindAsync(aricleId, date);
+
+            if (vo == null)
+            {
+                await db.ArticleVisits.AddAsync(new ArticleVisits()
+                {
+                    ArticleId = aricleId,
+                    Visits = 1,
+                    Date = date,
+                });
+            }
+            else
+            {
+                vo.Visits += 1;
+            }
+
+            await db.SaveChangesAsync();
+        }
+
+        public async Task<List<ArticleDto>> GetRating(int take = 100)
+        {
+            if (take > 100) take = 100; if (take < 1) take = 1;
+
+            return (await memoryCache.GetOrCreateAsync("ARTICLE_RATING" + take, async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15);
+
+                var topVis = await db.ArticleVisits
+                    .GroupBy(x => x.ArticleId)
+                    .OrderByDescending(x => x.Sum(y => y.Visits))
+                    .Take(take)
+                    .Select(x => new { x.Key, Sum = x.Sum(y => y.Visits) }).ToDictionaryAsync(x => x.Key, x => x.Sum);
+
+                var topIds = topVis.Keys.ToArray();
+
+                var topArticles = await db.Articles.Where(x => topIds.Contains(x.Id)).ToListAsync();
+
+                return topArticles.Select(x => new ArticleDto
+                {
+                    Id = x.Id,
+                    Name = x.Name,
+                    CreateDate = x.CreateDate,
+                    Title = x.Title,
+                    Visits = topVis[x.Id],
+                }).ToList();
+            }))!;
         }
     }
 }
