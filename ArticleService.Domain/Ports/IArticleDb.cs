@@ -7,7 +7,7 @@ namespace ArticleService.Domain.Ports
         /// <summary>
         /// Возвращает страницу
         /// </summary>
-        Task<ArticleDto?> GetArticle(string name, bool save_visit = true);
+        Task<ArticleDto?> GetArticle(string? culture_key, string name, bool save_visit = true);
         /// <summary>
         /// Создаёт или обновляет страницу
         /// </summary>
@@ -31,6 +31,6 @@ namespace ArticleService.Domain.Ports
         /// <summary>
         /// Возвращает топ самых популярных статей
         /// </summary>
-        Task<List<ArticleDto>> GetRating(int take = 100);
+        Task<List<ArticleDto>> GetRating(string? cultureKey, int take = 100);
     }
 }

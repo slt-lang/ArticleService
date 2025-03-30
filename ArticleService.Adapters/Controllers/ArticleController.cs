@@ -9,9 +9,9 @@ namespace ArticleService.Controllers
     public class ArticleController(IArticleDb articleDb) : ControllerBase
     {
         [HttpGet(nameof(GetArticle))]
-        public async Task<ActionResult<ArticleDto>> GetArticle([FromQuery] string name, bool? save_visit = true)
+        public async Task<ActionResult<ArticleDto>> GetArticle([FromQuery] string? culture_key, string name, bool? save_visit = true)
         {
-            var article = await articleDb.GetArticle(name, save_visit ?? true);
+            var article = await articleDb.GetArticle(culture_key, name, save_visit ?? true);
 
             if (article == null)
                 return NotFound();
@@ -20,11 +20,11 @@ namespace ArticleService.Controllers
         }
 
         [HttpGet(nameof(GetArticleHistory))]
-        public async Task<ActionResult<List<ArticleDto>>> GetArticleHistory([FromQuery] string name)
+        public async Task<ActionResult<List<ArticleDto>>> GetArticleHistory([FromQuery] string? culture_key, string name)
         {
             try
             {
-                var article = await articleDb.GetArticle(name);
+                var article = await articleDb.GetArticle(culture_key, name);
 
                 if (article == null)
                     return NotFound();
@@ -65,11 +65,11 @@ namespace ArticleService.Controllers
         }
 
         [HttpDelete(nameof(DeleteArticle))]
-        public async Task<ActionResult<ArticleDto>> DeleteArticle([FromQuery] string name)
+        public async Task<ActionResult<ArticleDto>> DeleteArticle([FromQuery] string? culture_key, string name)
         {
             try
             {
-                var article = await articleDb.GetArticle(name);
+                var article = await articleDb.GetArticle(culture_key, name);
                 await articleDb.DeleteArticle(article!);
                 return Ok();
             }
@@ -82,9 +82,9 @@ namespace ArticleService.Controllers
         }
 
         [HttpGet(nameof(GetRating))]
-        public async Task<ActionResult<List<ArticleDto>>> GetRating()
+        public async Task<ActionResult<List<ArticleDto>>> GetRating([FromQuery] string? culture_key)
         {
-            return Ok(await articleDb.GetRating());
+            return Ok(await articleDb.GetRating(culture_key));
         }
     }
 }

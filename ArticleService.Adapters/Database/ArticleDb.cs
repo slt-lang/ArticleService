@@ -9,14 +9,16 @@ namespace ArticleService.Adapters.Database
 {
     public class ArticleDb(IDateTime dateTime, IMemoryCache memoryCache, ArticleServiceContext db, Config config) : IArticleDb
     {
-        public async Task<ArticleDto?> GetArticle(string name, bool save_visit = true)
+        public async Task<ArticleDto?> GetArticle(string? culture_key, string name, bool save_visit = true)
         {
-            var articleInfo = await db.Articles.AsNoTracking().FirstOrDefaultAsync(x => x.Name == name);
+            var articleInfo = await db.Articles.AsNoTracking().FirstOrDefaultAsync(x => x.Name == name && x.CultureKey == culture_key);
             if (articleInfo == null)
             {
                 return null!;
             }
             var articleContent = await db.ArticleHistory.AsNoTracking().Where(x => x.ArticleId == articleInfo.Id).OrderByDescending(x => x.CreateDate).OrderByDescending(x => x.Id).FirstAsync();
+            var visitsWeek = await db.ArticleVisits.AsNoTracking().Where(x => x.ArticleId == articleInfo.Id && x.Date >= dateTime.UtcToday.AddDays(-7)).SumAsync(x => x.Visits);
+            var visits = await db.ArticleVisits.AsNoTracking().Where(x => x.ArticleId == articleInfo.Id).SumAsync(x => x.Visits);
 
             if (save_visit)
             {
@@ -26,18 +28,21 @@ namespace ArticleService.Adapters.Database
             return new ArticleDto()
             {
                 Id = articleInfo.Id,
+                CultureKey = articleInfo.CultureKey!,
                 HistoryId = articleContent.Id,
                 CreateDate = articleInfo.CreateDate,
                 UpdateDate = articleContent.CreateDate,
                 Name = articleInfo.Name,
                 Title = articleInfo.Title,
                 Content = articleContent.Content,
+                Visits = visits,
+                VisitsWeekly = visitsWeek,
             };
         }
 
         public async Task UpsertArticle(ArticleDto article)
         {
-            var existedArticle = await db.Articles.FirstOrDefaultAsync(x => x.Name == article.Name);
+            var existedArticle = await db.Articles.FirstOrDefaultAsync(x => x.Name == article.Name && x.CultureKey == article.CultureKey);
 
             if (existedArticle != null)
             {
@@ -54,11 +59,14 @@ namespace ArticleService.Adapters.Database
 
                 await db.SaveChangesAsync();
                 await CheckMaxHistory(existedArticle.Id);
+                if (article.Visits != default)
+                    await AddVisit(existedArticle.Id, article.Visits);
             }
             else
             {
-                await db.Articles.AddAsync(new Article()
+                var newArticle = await db.Articles.AddAsync(new Article()
                 {
+                    CultureKey = article.CultureKey,
                     Name = article.Name,
                     Title = article.Title,
                     History = [
@@ -66,15 +74,16 @@ namespace ArticleService.Adapters.Database
                         {
                             Content = article.Content,
                         }
-                    ]
+                    ],
                 });
                 await db.SaveChangesAsync();
+                await AddVisit(newArticle.Entity.Id, article.Visits);
             }
         }
 
         public async Task<List<ArticleDto>> GetArticleHistory(ArticleDto article)
         {
-            var existedArticle = await GetArticle(article.Name);
+            var existedArticle = await GetArticle(article.CultureKey, article.Name);
             if (existedArticle == null)
                 throw new ArgumentException(nameof(article.Name));
             var history = await db.ArticleHistory.Where(x => x.ArticleId == existedArticle.Id).ToListAsync();
@@ -82,6 +91,7 @@ namespace ArticleService.Adapters.Database
             return history.Select(x => new ArticleDto()
             {
                 Id = article.Id,
+                CultureKey = article.CultureKey,
                 Name = article.Name,
                 CreateDate = article.CreateDate,
                 Title = article.Title,
@@ -127,9 +137,9 @@ namespace ArticleService.Adapters.Database
             }
         }
 
-        private async Task AddVisit(int aricleId)
+        private async Task AddVisit(int aricleId, long increment = 1)
         {
-            var date = dateTime.UtcNow.Date;
+            var date = dateTime.UtcToday;
 
             var vo = await db.ArticleVisits.FindAsync(aricleId, date);
 
@@ -138,31 +148,34 @@ namespace ArticleService.Adapters.Database
                 await db.ArticleVisits.AddAsync(new ArticleVisits()
                 {
                     ArticleId = aricleId,
-                    Visits = 1,
+                    Visits = increment,
                     Date = date,
                 });
             }
             else
             {
-                vo.Visits += 1;
+                vo.Visits += increment;
             }
 
             await db.SaveChangesAsync();
         }
 
-        public async Task<List<ArticleDto>> GetRating(int take = 100)
+        public async Task<List<ArticleDto>> GetRating(string? cultureKey, int take = 100)
         {
             if (take > 100) take = 100; if (take < 1) take = 1;
 
-            return (await memoryCache.GetOrCreateAsync("ARTICLE_RATING" + take, async entry =>
+            return (await memoryCache.GetOrCreateAsync("ARTICLE_RATING" + $"{cultureKey??"null"}/{take}" , async entry =>
             {
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15);
 
+                var date = dateTime.UtcToday.AddDays(-7);
+
                 var topVis = await db.ArticleVisits
+                    .Where(x => x.Article!.CultureKey == cultureKey)
                     .GroupBy(x => x.ArticleId)
                     .OrderByDescending(x => x.Sum(y => y.Visits))
                     .Take(take)
-                    .Select(x => new { x.Key, Sum = x.Sum(y => y.Visits) }).ToDictionaryAsync(x => x.Key, x => x.Sum);
+                    .Select(x => new { x.Key, Sum = x.Sum(y => y.Visits), Sum7Days = x.Where(x => x.Date >= date).Sum(y => y.Visits) }).ToDictionaryAsync(x => x.Key, x => (x.Sum, x.Sum7Days));
 
                 var topIds = topVis.Keys.ToArray();
 
@@ -171,10 +184,12 @@ namespace ArticleService.Adapters.Database
                 return topArticles.Select(x => new ArticleDto
                 {
                     Id = x.Id,
+                    CultureKey = x.CultureKey!,
                     Name = x.Name,
                     CreateDate = x.CreateDate,
                     Title = x.Title,
-                    Visits = topVis[x.Id],
+                    Visits = topVis[x.Id].Sum,
+                    VisitsWeekly = topVis[x.Id].Sum7Days,
                 }).ToList();
             }))!;
         }

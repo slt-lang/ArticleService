@@ -19,6 +19,7 @@ namespace ArticleService.Adapters.Database
 
                 e.HasKey(e => e.Id);
                 e.Property(e => e.Name).IsRequired().HasMaxLength(64);
+                e.Property(e => e.CultureKey).IsRequired(false).HasMaxLength(16);
                 e.Property(e => e.CreateDate).IsRequired().HasDefaultValueSql(DateTimeNowSqlFunction);
                 e.Property(e => e.Title).IsRequired().HasMaxLength(128).IsUnicode(true);
 

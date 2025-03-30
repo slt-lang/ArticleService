@@ -10,9 +10,11 @@ namespace ArticleService.Tests
 {
     public class ArticleTests
     {
+        public static string CultureKey => "ru";
         public static string ArticleName => "Test";
         public static ArticleDto NewArticle => new ArticleDto()
         {
+            CultureKey = CultureKey,
             Content = "Content",
             Name = ArticleName,
             Title = "TestTitle",
@@ -25,7 +27,7 @@ namespace ArticleService.Tests
 
             await articleService.UpsertArticle(NewArticle);
 
-            var dto = await articleService.GetArticle(ArticleName);
+            var dto = await articleService.GetArticle(CultureKey, ArticleName);
 
             Assert.NotNull(dto);
             Assert.True(NewArticle.Content == dto.Content);
@@ -68,7 +70,7 @@ namespace ArticleService.Tests
 
             var hid = default(int);
             {
-                var dto = await articleService.GetArticle(ArticleName);
+                var dto = await articleService.GetArticle(CultureKey, ArticleName);
                 Assert.NotNull(dto);
                 hid = dto.HistoryId;
             }
@@ -81,11 +83,43 @@ namespace ArticleService.Tests
             await articleService.RebaseArticle(hid);
 
             {
-                var dto = await articleService.GetArticle(ArticleName);
+                var dto = await articleService.GetArticle(CultureKey, ArticleName);
                 Assert.NotNull(dto);
                 Assert.Equal(r, dto.Content);
             }
 
+        }
+
+        [Fact]
+        public async void Cultures()
+        {
+            var articleService = CommonMocks.ArticleDb;
+
+            var cultures = new string[] { null, "ru", "en" };
+
+            {
+                var dto = await articleService.GetArticle(null, ArticleName);
+                Assert.Null(dto);
+            }
+
+            foreach (var cultureKey in cultures)
+            {
+                var a = NewArticle;
+                a.CultureKey = cultureKey;
+                a.Content += cultureKey ?? "null";
+                await articleService.UpsertArticle(a);
+
+                var dto = await articleService.GetArticle(cultureKey, ArticleName);
+                Assert.NotNull(dto);
+                Assert.Equal(cultureKey, dto.CultureKey);
+                Assert.Equal(NewArticle.Content + (cultureKey ?? "null"), dto.Content);
+            }
+
+            {
+                var dto = await articleService.GetArticle(null, ArticleName);
+                Assert.NotNull(dto);
+                Assert.Null(dto.CultureKey);
+            }
         }
     }
 }
