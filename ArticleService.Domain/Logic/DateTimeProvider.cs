@@ -6,5 +6,7 @@ namespace ArticleService.Domain.Logic
     {
         public DateTime Now => DateTime.Now;
         public DateTime UtcNow => DateTime.UtcNow;
+        public DateTime Today => DateTime.Today;
+        public DateTime UtcToday => DateTime.Today.ToUniversalTime();
     }
 }
