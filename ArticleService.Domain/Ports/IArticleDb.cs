@@ -32,5 +32,6 @@ namespace ArticleService.Domain.Ports
         /// Возвращает топ самых популярных статей
         /// </summary>
         Task<List<ArticleDto>> GetRating(string? cultureKey, int take = 100);
+        Task<List<ArticleDto>> GetArticlesByUserId(int userId);
     }
 }

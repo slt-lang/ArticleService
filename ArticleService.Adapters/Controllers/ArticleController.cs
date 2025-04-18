@@ -86,5 +86,11 @@ namespace ArticleService.Controllers
         {
             return Ok(await articleDb.GetRating(culture_key));
         }
+
+        [HttpGet(nameof(GetUserEditions))]
+        public async Task<ActionResult<List<ArticleDto>>> GetUserEditions([FromQuery] int userId)
+        {
+            return Ok(await articleDb.GetArticlesByUserId(userId));
+        }
     }
 }
