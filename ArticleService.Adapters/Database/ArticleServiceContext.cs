@@ -37,6 +37,7 @@ namespace ArticleService.Adapters.Database
                 e.HasKey(e => e.Id);
                 e.Property(e => e.CreateDate).IsRequired().HasDefaultValueSql(DateTimeNowSqlFunction);
                 e.Property(e => e.Content).IsRequired().IsUnicode(true);
+                e.Property(e => e.UserId).IsRequired().HasDefaultValue(1);
 
                 e.HasIndex(e => e.Id);
                 e.HasIndex(e => e.ArticleId);

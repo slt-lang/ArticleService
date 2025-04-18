@@ -1,4 +1,5 @@
-﻿using ArticleService.Adapters.Database.Models;
+﻿using System.Xml.Linq;
+using ArticleService.Adapters.Database.Models;
 using ArticleService.Domain;
 using ArticleService.Domain.Ports;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +38,7 @@ namespace ArticleService.Adapters.Database
                 Content = articleContent.Content,
                 Visits = visits,
                 VisitsWeekly = visitsWeek,
+                UserId = articleContent.UserId,
             };
         }
 
@@ -55,6 +57,7 @@ namespace ArticleService.Adapters.Database
                 {
                     ArticleId = existedArticle.Id,
                     Content = article.Content,
+                    UserId = article.UserId,
                 });
 
                 await db.SaveChangesAsync();
@@ -73,6 +76,7 @@ namespace ArticleService.Adapters.Database
                         new()
                         {
                             Content = article.Content,
+                            UserId = article.UserId,
                         }
                     ],
                 });
@@ -98,6 +102,7 @@ namespace ArticleService.Adapters.Database
                 HistoryId = x.Id,
                 Content = x.Content,
                 UpdateDate = x.CreateDate,
+                UserId = x.UserId,
             }).ToList();
         }
 
@@ -110,6 +115,7 @@ namespace ArticleService.Adapters.Database
             {
                 ArticleId = articleContent.ArticleId,
                 Content = articleContent.Content,
+                UserId= articleContent.UserId,
             });
             await CheckMaxHistory(articleContent.ArticleId);
             await db.SaveChangesAsync();
@@ -135,6 +141,29 @@ namespace ArticleService.Adapters.Database
                 }
                 await db.SaveChangesAsync();
             }
+        }
+
+        public async Task<List<ArticleDto>> GetArticlesByUserId(int userId)
+        {
+            var articlesHistories = await db.ArticleHistory.AsNoTracking()
+                .Where(x => x.UserId == userId)
+                .OrderByDescending(x => x.CreateDate)
+                .Select(x => new { x.ArticleId, x.CreateDate })
+                .ToArrayAsync();
+
+            var articleIds = articlesHistories.Select(x => x.ArticleId).Distinct().ToArray();
+
+            var articleInfo = await db.Articles.AsNoTracking().Where(x => articleIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x);
+
+            return articlesHistories.DistinctBy(x => x.ArticleId).Select(x => new ArticleDto()
+            {
+                Id = x.ArticleId,
+                CultureKey = articleInfo[x.ArticleId].CultureKey!,
+                UpdateDate = x.CreateDate,
+                Name = articleInfo[x.ArticleId].Name,
+                Title = articleInfo[x.ArticleId].Title,
+                UserId = userId,
+            }).ToList();
         }
 
         private async Task AddVisit(int aricleId, long increment = 1)

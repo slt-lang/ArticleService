@@ -9,5 +9,6 @@ namespace ArticleService.Adapters.Database.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
         public DateTime CreateDate { get; set; }
         public string Content { get; set; } = default!;
+        public int UserId { get; set; }
     }
 }
