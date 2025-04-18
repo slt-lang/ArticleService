@@ -3,6 +3,7 @@ using ArticleService.Domain;
 using ArticleService.Domain.Logic;
 using ArticleService.Domain.Ports;
 using Microsoft.EntityFrameworkCore;
+using sltlang.Common.Common;
 
 namespace ArticleService
 {
@@ -36,6 +37,7 @@ namespace ArticleService
 
             app.UseAuthorization();
 
+            app.MapGet("/serviceinfo", () => ServiceInfo.GetServiceInfo(typeof(Program).Assembly)).WithGroupName("Service");
 
             app.MapControllers();
 
